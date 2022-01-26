@@ -7,8 +7,8 @@ services:
     restart: always
     volumes:
       - ./_postgres_data:/var/lib/postgresql/data/
-    #ports:
-    #  - 5432:5432
+    ports:
+     - 5432:5432
     env_file:
       - env.txt
     networks:
@@ -21,8 +21,8 @@ services:
     volumes:
       - ./_redis_data:/var/lib/redis
       - ./redis/rc.local:/etc/rc.local
-    #ports:
-    #  - 6379:6379
+    ports:
+     - 6379:6379
     networks:
       - v-network
   web:
