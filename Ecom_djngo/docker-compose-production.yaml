@@ -1,0 +1,80 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:11.2-alpine
+    container_name: postgres
+    restart: always
+    volumes:
+      - ./_postgres_data:/var/lib/postgresql/data/
+    #ports:
+    #  - 5432:5432
+    env_file:
+      - env.txt
+    networks:
+      - v-network
+  redis:
+    image: redis:alpine
+    restart: always
+    container_name: redis
+    command: redis-server --appendonly yes
+    volumes:
+      - ./_redis_data:/var/lib/redis
+      - ./redis/rc.local:/etc/rc.local
+    #ports:
+    #  - 6379:6379
+    networks:
+      - v-network
+  web:
+    image: project/backend:0.0.1
+    restart: always
+    container_name: web
+    ports:
+      - 8000:8000
+    volumes:
+      - ./sock/:/sock/
+      - ./project/:/usr/src/app/
+      - ./logs/:/logs/
+      - ./static/:/static/
+    command: sh entrypoint.sh
+    #command: "python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - env.txt
+    networks:
+      - v-network
+
+  worker:
+    image: project/backend:0.0.1
+    restart: always
+    container_name: worker
+    command: "celery -A project worker -l INFO"
+    env_file:
+      - env.txt
+    volumes:
+      - ./project/:/usr/src/app/
+    networks:
+      - v-network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/nginx-proxy-production.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./react/dist:/var/www/frontend
+      - ./static/:/var/www/static
+      - ./sock/:/sock/
+      - ./logs/nginx:/var/log/nginx
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      - web
+      - worker
+    networks:
+      - v-network
+networks:
+  v-network:
+    external: false
+
